@@ -3,6 +3,7 @@ import { NODE_URLS } from "./lib/api";
 import ClusterView from "./components/ClusterView";
 import KVConsole from "./components/KVConsole";
 import LogViewer from "./components/LogViewer";
+import ChaosControls from "./components/ChaosControls";
 import "./App.css";
 
 export default function App() {
@@ -35,7 +36,10 @@ export default function App() {
 
       <main className="app-grid">
         <ClusterView nodes={nodes} term={term} />
-        <KVConsole nodes={nodes} leader={leader} />
+        <div className="app-side-stack">
+          <KVConsole nodes={nodes} leader={leader} />
+          <ChaosControls nodes={nodes} />
+        </div>
         <LogViewer nodes={nodes} />
       </main>
 

@@ -131,12 +131,30 @@ healthy (confirmed via manual fetch). Fixed by self-scheduling: each cycle now w
 previous one to fully resolve before scheduling the next via `setTimeout`, so at most one batch is
 ever in flight.
 
-## Phase 5 — Chaos Testing UI
+## Phase 5 — Chaos Testing UI  [DONE]
 - [x] Backend: POST /chaos/kill, /chaos/revive — done in Phase 3's gateway/http.go (raft.Kill()/Revive()
       existed since Phase 1); tested in gateway/http_test.go. No separate chaos.go file needed - it's
       two handlers, kept in http.go rather than a near-empty extra file.
-- [ ] `ChaosControls.jsx` — Kill/Revive buttons per node
-- [ ] Visual verification: kill leader → re-election visible; revive → catch-up visible
+- [x] `ChaosControls.jsx` — Kill/Revive buttons per node, alive/killed/unreachable status pill,
+      leader tag, wired into App.jsx alongside KVConsole
+- [x] Visual verification (real 3-node cluster, Playwright): killed the leader via the UI button →
+      remaining two nodes elected a new leader within ~1s, dashboard showed the killed node in red
+      ("KILLED") and the new leader in gold with the crown; clicked Revive → node rejoined as
+      follower and its log caught up to match the cluster within one poll cycle
+
+**Bug found and fixed during this phase's visual verification (same root cause class as Phase 4's,
+worse manifestation):** `useClusterSocket`'s `Promise.all`-based concurrent fetching intermittently
+made every node appear "unreachable" even though each endpoint answered a lone request in
+well under 100ms - traced to something on this dev machine (evidence points at Norton, which is
+installed) serializing/stalling *concurrent* localhost connections from the browser process: even
+just 2 simultaneous requests to the exact same single endpoint both hung for the full timeout,
+while one at a time was instant and 100% reliable. Fixed by making `pollOnce` fetch every node,
+and both endpoints per node, strictly sequentially instead of with `Promise.all`. Slightly higher
+latency per poll cycle (still well under a second for 3 nodes), but reliable regardless of local
+network security software. Also learned: always wrap Playwright verification scripts in
+try/finally around `browser.close()` - an early throw otherwise leaks the Chromium process, and
+enough leaked instances over a debugging session visibly degrades the machine (13 zombie chrome.exe
+accumulated before this was caught).
 
 ## Phase 6 — Dockerization & Polish
 - [ ] `docker-compose.yml` — 5 backend nodes + frontend, one command startup

@@ -72,8 +72,11 @@
   grid-area: cluster;
 }
 
-.app-grid > .kv-console {
+.app-side-stack {
   grid-area: kv;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
 }
 
 .app-grid > .log-viewer {

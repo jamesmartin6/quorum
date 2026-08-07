@@ -30,16 +30,27 @@ export function useClusterSocket(nodeUrls, intervalMs = POLL_INTERVAL_MS) {
     let timeoutId;
 
     async function pollOnce() {
-      const results = await Promise.all(
-        nodeUrls.map(async (url) => {
-          try {
-            const [status, logResp] = await Promise.all([getStatus(url), getLog(url)]);
-            return { url, status, log: logResp.entries || [], reachable: true };
-          } catch {
-            return { url, status: null, log: [], reachable: false };
-          }
-        })
-      );
+      // Fetched sequentially, one node at a time, deliberately NOT
+      // Promise.all-ed across nodes (or even status+log for one node).
+      // Concurrent requests are noticeably less reliable in some local
+      // network setups - security/proxy software that inspects outbound
+      // connections can serialize or stall simultaneous localhost
+      // connections from a single process, which showed up here as every
+      // node reporting "unreachable" under Promise.all even though each
+      // endpoint answered instantly in isolation. Sequential adds a little
+      // latency per cycle but each request is fast, and the self-scheduling
+      // loop below already adapts to however long a full cycle actually takes.
+      const results = [];
+      for (const url of nodeUrls) {
+        if (cancelled) return;
+        try {
+          const status = await getStatus(url);
+          const logResp = await getLog(url);
+          results.push({ url, status, log: logResp.entries || [], reachable: true });
+        } catch {
+          results.push({ url, status: null, log: [], reachable: false });
+        }
+      }
       if (cancelled) return;
 
       setNodes((prev) =>
