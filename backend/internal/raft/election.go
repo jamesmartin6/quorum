@@ -143,6 +143,18 @@ func (r *Raft) becomeLeader(term uint64) {
 		r.nextIndex[p] = r.entries.LastIndex() + 1
 		r.matchIndex[p] = 0
 	}
+	// Append a no-op entry in the new term and persist it immediately. A
+	// leader may only directly commit entries from its OWN term (the
+	// Raft "Figure 8" safety rule) - without this, a freshly elected
+	// leader could sit with commitIndex stuck at 0 (even though a
+	// majority already safely holds every prior entry) until a client
+	// happens to write something new. This no-op commits as soon as a
+	// majority acks it, which transitively commits everything before it
+	// too, so the cluster regains full read/write availability right
+	// after an election instead of waiting on the next client write.
+	r.entries.Append(term, LogEntry{Op: "NOOP"})
+	r.persistLocked()
+	r.advanceCommitIndexLocked() // handles the single-node-cluster case, where no peer reply will ever trigger this
 	// Force an immediate heartbeat on the next tick instead of waiting a
 	// full heartbeatInterval, so followers learn about the new leader fast.
 	r.lastHeartbeat = time.Time{}

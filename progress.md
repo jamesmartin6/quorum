@@ -66,15 +66,28 @@ to run the whole system.
       Result: exactly one leader elected, all nodes agree on term/leader. Killed the leader process
       → remaining two nodes elected a new leader within ~2s. Matches spec exactly.
 
-## Phase 2 — Log Replication
+## Phase 2 — Log Replication  [DONE]
 - [x] Extend proto: AppendEntries carries entries[], prevLogIndex/Term, leaderCommit (done in Phase 1)
 - [x] `internal/raft/log.go` — log storage; `persist.go` — JSON-snapshot file persistence, replay on restart
 - [x] Leader replication loop (parallel per-follower), nextIndex/matchIndex tracking (done in Phase 1's replication.go)
 - [x] Follower consistency check + nextIndex backoff on mismatch (conflictIndex/conflictTerm, done in Phase 1)
 - [x] commitIndex advancement on majority replication; apply to state machine in order (applyLoop, done in Phase 1)
-- [ ] Unit tests specifically for log replication/matching/persistence behavior (replication_test.go)
-- [ ] Integration test: kill+restart follower mid-write, assert log convergence
-- [ ] Integration test: kill leader mid-write, verify no data loss, new leader elected (the core Raft guarantee)
+- [x] Unit tests: `replication_test.go` (log matching, truncation, commit-index clamping, single-node
+      immediate commit, and the Raft "Figure 8" safety property — a leader must not directly commit an
+      older-term entry just because it's majority-replicated); `persist_test.go` (file storage round-trip,
+      atomic save, restore-on-construction)
+- [x] Integration tests (`backend/test/integration_test.go`, REAL gRPC over loopback TCP, not the
+      in-memory test transport): cluster formation + replication; killed-follower-restarts-and-converges;
+      **kill leader mid-write → no data loss → new leader elected** (the explicit core-guarantee test)
+- [x] `go test ./... -race` clean (no data races) across raft unit + real-gRPC integration tests
+
+**Bug found and fixed during Phase 2 testing:** a freshly elected leader could get stuck with
+`commitIndex` frozen at 0 (even with a majority already holding every prior entry) because Raft
+safety only allows a leader to directly commit entries from its own current term. Fixed with the
+standard no-op-on-election trick: `becomeLeader` now appends and immediately replicates a NOOP
+entry in the new term, which commits (and transitively commits everything before it) as soon as a
+majority acks it, instead of waiting for the next client write. The KV layer (Phase 3) must skip
+NOOP entries when applying to the map.
 
 ## Phase 3 — KV API Layer
 - [ ] `internal/kv/store.go` — in-memory map + `Apply(entry)`
