@@ -109,13 +109,27 @@ NOOP entries when applying to the map.
 map itself updates asynchronously afterward via the apply loop. A client could SET then immediately
 GET and see nothing. Fixed by also waiting on `kv.Store.LastApplied()` reaching the target index.
 
-## Phase 4 — Frontend Cluster Visualizer
-- [ ] Vite + React app scaffold
-- [ ] `lib/api.js` REST client, `hooks/useClusterSocket.js` (polling-based) state hook
-- [ ] `ClusterView.jsx` — node graph, leader highlight, heartbeat pulses, term display
-- [ ] `KVConsole.jsx` — SET/GET/DELETE form + result/handler display
-- [ ] `LogViewer.jsx` — per-node log table with commit index marker
-- [ ] Visual verification against a running local cluster
+## Phase 4 — Frontend Cluster Visualizer  [DONE]
+- [x] Vite + React app scaffold (manually written, not `npm create vite` — full control, no wizard prompts)
+- [x] `lib/api.js` REST client, `hooks/useClusterSocket.js` (self-scheduling polling-based) state hook
+- [x] `ClusterView.jsx` — SVG node graph, leader highlight (gold ring + crown, breathing animation),
+      animated heartbeat lines leader→followers, prominent term badge, role/status color coding
+      validated with the dataviz skill's palette validator (all-pairs CVD check passes)
+- [x] `KVConsole.jsx` — target-node selector (Auto=leader, or pick any node to see redirect
+      behavior), SET/GET/DELETE form, request history with node attribution + timing
+- [x] `LogViewer.jsx` — per-node log table, committed rows marked (green rail) vs pending (gold rail)
+- [x] Visual verification: real 3-node backend cluster + `npm run dev`, driven headlessly via
+      Playwright (Chromium) since this is a non-interactive dev box — screenshots + a live
+      SET/GET/DELETE round trip through the UI, zero console errors
+
+**Bug found and fixed during visual verification:** the polling hook used `setInterval(pollOnce, 300)`,
+which fires the next batch of 6 requests (2 endpoints × 3 nodes) on a fixed clock regardless of
+whether the previous batch finished. Under any latency this piles up in-flight requests past the
+browser's per-origin connection limit, so later requests queue behind stuck ones until the client's
+own AbortController times them out — every node showed "unreachable" even though the backend was
+healthy (confirmed via manual fetch). Fixed by self-scheduling: each cycle now waits for the
+previous one to fully resolve before scheduling the next via `setTimeout`, so at most one batch is
+ever in flight.
 
 ## Phase 5 — Chaos Testing UI
 - [x] Backend: POST /chaos/kill, /chaos/revive — done in Phase 3's gateway/http.go (raft.Kill()/Revive()

@@ -1,0 +1,145 @@
+.log-viewer {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.log-viewer-hint {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.commit-swatch {
+  display: inline-block;
+  width: 18px;
+  height: 3px;
+  background: var(--good);
+  border-radius: 2px;
+}
+
+.log-columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+}
+
+.log-column {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.log-column-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  font-size: 12.5px;
+}
+
+.log-role-tag {
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--surface-1);
+  color: var(--text-muted);
+}
+
+.log-role-tag.role-leader {
+  color: var(--gold);
+}
+
+.log-role-tag.role-follower {
+  color: var(--blue);
+}
+
+.log-role-tag.role-candidate {
+  color: var(--aqua);
+}
+
+.log-table-wrap {
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.log-empty {
+  padding: 14px;
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 12.5px;
+  text-align: center;
+}
+
+.log-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.log-table th {
+  position: sticky;
+  top: 0;
+  background: var(--surface-2);
+  text-align: left;
+  padding: 6px 10px;
+  color: var(--text-muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid var(--border);
+}
+
+.log-table td {
+  padding: 5px 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.log-table tr.committed {
+  color: var(--text-primary);
+}
+
+.log-table tr.committed td:first-child {
+  box-shadow: inset 3px 0 0 var(--good);
+}
+
+.log-table tr.pending {
+  color: var(--text-muted);
+}
+
+.log-table tr.pending td:first-child {
+  box-shadow: inset 3px 0 0 var(--gold);
+}
+
+.op-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 4px;
+  letter-spacing: 0.03em;
+}
+
+.op-badge.op-set {
+  background: color-mix(in srgb, var(--good) 22%, transparent);
+  color: var(--good);
+}
+
+.op-badge.op-delete {
+  background: color-mix(in srgb, var(--critical) 22%, transparent);
+  color: #ff8f8f;
+}
+
+.op-badge.op-noop {
+  background: color-mix(in srgb, var(--text-muted) 25%, transparent);
+  color: var(--text-muted);
+}

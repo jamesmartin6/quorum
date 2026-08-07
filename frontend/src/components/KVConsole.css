@@ -1,0 +1,125 @@
+.kv-console {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.kv-form {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr 1fr auto;
+  gap: 10px;
+  align-items: end;
+}
+
+.kv-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.kv-field input,
+.kv-field select {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 9px 10px;
+  color: var(--text-primary);
+  font-size: 14px;
+}
+
+.kv-field input:focus,
+.kv-field select:focus {
+  outline: 2px solid var(--blue);
+  outline-offset: 1px;
+}
+
+.kv-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.btn {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 9px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  background: var(--surface-2);
+  color: var(--text-primary);
+  transition: transform 0.1s ease, background 0.15s ease;
+}
+
+.btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.btn-set {
+  border-color: color-mix(in srgb, var(--good) 50%, var(--border));
+}
+
+.btn-get {
+  border-color: color-mix(in srgb, var(--blue) 50%, var(--border));
+}
+
+.btn-delete {
+  border-color: color-mix(in srgb, var(--critical) 50%, var(--border));
+}
+
+.kv-history {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.kv-empty {
+  color: var(--text-muted);
+  font-size: 13px;
+  margin: 0;
+}
+
+.kv-history-row {
+  display: grid;
+  grid-template-columns: 60px 1fr 100px 1fr 50px;
+  gap: 10px;
+  align-items: center;
+  font-size: 12.5px;
+  padding: 7px 10px;
+  border-radius: 8px;
+  background: var(--surface-2);
+  border-left: 3px solid var(--good);
+}
+
+.kv-history-row.err {
+  border-left-color: var(--critical);
+}
+
+.kv-history-action {
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
+}
+
+.kv-history-node {
+  color: var(--text-muted);
+}
+
+.kv-history-detail {
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kv-history-ms {
+  color: var(--text-muted);
+  text-align: right;
+}

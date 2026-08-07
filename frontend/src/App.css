@@ -1,0 +1,97 @@
+.app-shell {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 28px 20px 60px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.app-title {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.app-logo {
+  font-size: 34px;
+}
+
+.app-title h1 {
+  margin: 0;
+  font-size: 26px;
+}
+
+.app-title p {
+  margin: 2px 0 0;
+  color: var(--text-secondary);
+  font-size: 13.5px;
+}
+
+.app-summary {
+  display: flex;
+  gap: 22px;
+}
+
+.summary-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.summary-value {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.summary-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.app-grid {
+  display: grid;
+  grid-template-columns: 460px 1fr;
+  grid-template-areas:
+    "cluster kv"
+    "log log";
+  gap: 18px;
+}
+
+.app-grid > .cluster-view {
+  grid-area: cluster;
+}
+
+.app-grid > .kv-console {
+  grid-area: kv;
+}
+
+.app-grid > .log-viewer {
+  grid-area: log;
+}
+
+@media (max-width: 900px) {
+  .app-grid {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "cluster"
+      "kv"
+      "log";
+  }
+}
+
+.app-footer {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 12.5px;
+}
