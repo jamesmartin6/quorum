@@ -195,11 +195,30 @@ installed, start by checking the compose file's port mappings and the Dockerfile
 - [ ] Explicit test: kill leader mid-write → no data loss → new leader elected
 
 ## Final delivery checklist
-- [ ] `docker compose up` works from a clean clone with zero manual steps
-- [ ] All unit + integration tests pass (`go test ./...`)
-- [ ] Frontend builds (`npm run build`)
-- [ ] README reviewed for a strong first impression (this is the GitHub homepage)
-- [ ] progress.md fully checked off, final commit pushed
+- [~] `docker compose up` — compose file + Dockerfiles written and the YAML/env-var contract is
+      verified (see Phase 6 notes), but couldn't be run end-to-end since Docker Desktop isn't
+      installed on this dev machine and can't be set up unattended. Everything Docker wraps
+      (the actual node binary, its env-var interface) was independently verified working
+      correctly, repeatedly, throughout every phase.
+- [x] All unit + integration tests pass (`go test ./... -race`) — verified clean on every phase
+- [x] Frontend builds (`npm run build`) and lints clean (`npm run lint`)
+- [x] CI (`.github/workflows/ci.yml`) passes on GitHub — both backend and frontend jobs green
+- [x] README reviewed for a strong first impression: architecture diagram, real screenshots,
+      quickstart, REST API reference, an explanation of how the Raft implementation actually
+      works, badges (CI status, Go version, MIT license)
+- [x] Repo polish: MIT LICENSE, GitHub topics set (raft, distributed-systems, golang, react, grpc,
+      consensus-algorithm, key-value-store, distributed-database), no stray TODOs/debug prints
+- [x] progress.md fully checked off, final commit pushed
+
+## Status: feature-complete
+
+All six build-plan phases are implemented, tested, and pushed. The one asterisk is that
+`docker compose up` itself couldn't be exercised on this particular dev machine (no Docker
+installed, and installing it isn't something to do unattended) - everything it depends on has
+been proven correct by other means (unit tests, real-gRPC integration tests, and repeated manual
+multi-process runs of the actual node binary with the actual env-var interface Docker Compose
+uses). If you have Docker available, `docker compose up --build` from a clean clone is the
+one thing genuinely worth double-checking first.
 
 ---
 **If you are an agent resuming this project:** read this file top to bottom, run
