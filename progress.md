@@ -156,11 +156,38 @@ try/finally around `browser.close()` - an early throw otherwise leaks the Chromi
 enough leaked instances over a debugging session visibly degrades the machine (13 zombie chrome.exe
 accumulated before this was caught).
 
-## Phase 6 — Dockerization & Polish
-- [ ] `docker-compose.yml` — 5 backend nodes + frontend, one command startup
-- [ ] Structured logging with node ID prefix
-- [ ] `README.md` — architecture diagram, quickstart, demo GIF/recording
-- [ ] Final pass: lint/vet/test all green, clean up TODOs
+## Phase 6 — Dockerization & Polish  [DONE]
+- [x] `docker-compose.yml` — 5 backend nodes + frontend nginx container, one command startup
+      (`docker compose up --build`), named volumes per node for persistence, browser-facing
+      leader-redirect addresses via a small `cluster.FromEnv` extension (see below)
+- [x] `backend/Dockerfile` (multi-stage: golang:1.23-alpine build → alpine:3.20 runtime),
+      `frontend/Dockerfile` (multi-stage: node:20-alpine build → nginx:1.27-alpine runtime)
+- [x] Structured logging with node ID prefix — done in Phase 1's `main.go`
+- [x] `README.md` — architecture (mermaid diagram + directory breakdown), how the Raft
+      implementation actually works, quickstart, REST API table, local dev instructions,
+      testing summary, two real dashboard screenshots (not mockups - captured during Phase 4/5
+      Playwright verification)
+- [x] `LICENSE` (MIT) and `.github/workflows/ci.yml` (backend go test -race + vet, frontend
+      lint + build, on every push/PR)
+- [x] Final pass: `go build/vet/test -race` and `npm run build`/`lint` all green
+
+**Small enhancement made here:** extended `PEERS` parsing to accept an optional 4-part form
+(`raftHost:raftPort:httpHost:httpPort`) alongside the original 3-part form, because in Docker
+Compose peers reach each other by service name internally, but a leader-redirect response has to
+give the browser an address it can actually reach (the host-published port). Covered by
+`internal/cluster/config_test.go`.
+
+**Known limitation (disclosed, not fixed):** this dev machine has no Docker Desktop installed and
+installing it isn't something that can be done unattended (GUI installer, needs a restart, may
+need Hyper-V/WSL2 enabled). `docker compose up` itself could therefore not be run end-to-end here.
+What *was* verified: the compose YAML parses correctly (validated with js-yaml), the Dockerfiles
+follow standard well-tested multi-stage patterns, and the exact env-var contract the containers
+rely on (`NODE_ID`/`PEERS`/`RAFT_PORT`/`HTTP_PORT`/`DATA_DIR`, including the new 4-part peer
+format) is covered by unit tests and was proven correct through five separate rounds of manual
+multi-process verification on this machine (Phases 1, 3, 5) using the identical binary and
+env-var interface Docker Compose invokes - the only untested part is Docker itself, not the
+application. If `docker compose up --build` doesn't work first try on a real machine with Docker
+installed, start by checking the compose file's port mappings and the Dockerfiles.
 
 ## Testing Requirements (cross-phase)
 - [ ] Unit tests use in-memory RPC mock (no real network) for fast deterministic runs

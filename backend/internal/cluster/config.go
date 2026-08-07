@@ -43,7 +43,13 @@ func (c Config) PeerIDs() []string {
 // FromEnv builds a Config from environment variables:
 //
 //	NODE_ID     - this node's unique ID (required)
-//	PEERS       - comma-separated "id=raftHost:raftPort:httpPort" for every OTHER node (required unless single-node)
+//	PEERS       - comma-separated peer list, required unless single-node. Each entry is
+//	              "id=raftHost:raftPort:httpPort" (3-part) or, when the address a browser
+//	              should use to reach a peer's HTTP gateway differs from the address other
+//	              nodes use to reach its gRPC port - e.g. in Docker Compose, where peers
+//	              dial each other by service name but a leader-redirect response has to
+//	              give the browser a host-published address - "id=raftHost:raftPort:httpHost:httpPort"
+//	              (4-part).
 //	RAFT_PORT   - this node's gRPC port (default 9090)
 //	HTTP_PORT   - this node's HTTP gateway port (default 8080)
 //	DATA_DIR    - persistence directory (default "./data/<NODE_ID>")
@@ -75,13 +81,17 @@ func FromEnv() (Config, error) {
 				return Config{}, fmt.Errorf("cluster: malformed PEERS entry %q (want id=host:raftPort:httpPort)", entry)
 			}
 			peerID, addr := strings.TrimSpace(parts[0]), strings.TrimSpace(parts[1])
-			hostAndPorts := strings.Split(addr, ":")
-			if len(hostAndPorts) != 3 {
-				return Config{}, fmt.Errorf("cluster: malformed PEERS address %q for %q (want host:raftPort:httpPort)", addr, peerID)
+			segs := strings.Split(addr, ":")
+			switch len(segs) {
+			case 3: // host:raftPort:httpPort - same host for both
+				peers[peerID] = fmt.Sprintf("%s:%s", segs[0], segs[1])
+				peerHTTP[peerID] = fmt.Sprintf("%s:%s", segs[0], segs[2])
+			case 4: // raftHost:raftPort:httpHost:httpPort - distinct hosts
+				peers[peerID] = fmt.Sprintf("%s:%s", segs[0], segs[1])
+				peerHTTP[peerID] = fmt.Sprintf("%s:%s", segs[2], segs[3])
+			default:
+				return Config{}, fmt.Errorf("cluster: malformed PEERS address %q for %q (want host:raftPort:httpPort or raftHost:raftPort:httpHost:httpPort)", addr, peerID)
 			}
-			host := hostAndPorts[0]
-			peers[peerID] = fmt.Sprintf("%s:%s", host, hostAndPorts[1])
-			peerHTTP[peerID] = fmt.Sprintf("%s:%s", host, hostAndPorts[2])
 		}
 	}
 

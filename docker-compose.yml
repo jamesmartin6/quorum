@@ -1,0 +1,124 @@
+# One command starts a real 5-node Raft cluster plus the dashboard:
+#
+#   docker compose up --build
+#
+# Then open http://localhost:5173. Each node's HTTP gateway is also
+# published directly (8081-8085) so you can curl/inspect any node, or
+# `docker kill quorum-node-3-1` to see the dashboard react to a real
+# process death (as opposed to the in-app chaos Kill button, which only
+# stops that node's Raft participation without killing the container).
+#
+# Peer addresses use the 4-part "raftHost:raftPort:httpHost:httpPort" form:
+# nodes reach each other over the internal Compose network by service name
+# for Raft RPCs, but a leader-redirect response has to hand the BROWSER an
+# address it can actually reach, which is the published localhost port.
+
+x-node-common: &node-common
+  build:
+    context: ./backend
+  restart: unless-stopped
+
+services:
+  node-1:
+    <<: *node-common
+    environment:
+      NODE_ID: node-1
+      RAFT_PORT: "9090"
+      HTTP_PORT: "8080"
+      DATA_DIR: "/data"
+      PEERS: >-
+        node-2=node-2:9090:localhost:8082,
+        node-3=node-3:9090:localhost:8083,
+        node-4=node-4:9090:localhost:8084,
+        node-5=node-5:9090:localhost:8085
+    ports:
+      - "8081:8080"
+    volumes:
+      - node1-data:/data
+
+  node-2:
+    <<: *node-common
+    environment:
+      NODE_ID: node-2
+      RAFT_PORT: "9090"
+      HTTP_PORT: "8080"
+      DATA_DIR: "/data"
+      PEERS: >-
+        node-1=node-1:9090:localhost:8081,
+        node-3=node-3:9090:localhost:8083,
+        node-4=node-4:9090:localhost:8084,
+        node-5=node-5:9090:localhost:8085
+    ports:
+      - "8082:8080"
+    volumes:
+      - node2-data:/data
+
+  node-3:
+    <<: *node-common
+    environment:
+      NODE_ID: node-3
+      RAFT_PORT: "9090"
+      HTTP_PORT: "8080"
+      DATA_DIR: "/data"
+      PEERS: >-
+        node-1=node-1:9090:localhost:8081,
+        node-2=node-2:9090:localhost:8082,
+        node-4=node-4:9090:localhost:8084,
+        node-5=node-5:9090:localhost:8085
+    ports:
+      - "8083:8080"
+    volumes:
+      - node3-data:/data
+
+  node-4:
+    <<: *node-common
+    environment:
+      NODE_ID: node-4
+      RAFT_PORT: "9090"
+      HTTP_PORT: "8080"
+      DATA_DIR: "/data"
+      PEERS: >-
+        node-1=node-1:9090:localhost:8081,
+        node-2=node-2:9090:localhost:8082,
+        node-3=node-3:9090:localhost:8083,
+        node-5=node-5:9090:localhost:8085
+    ports:
+      - "8084:8080"
+    volumes:
+      - node4-data:/data
+
+  node-5:
+    <<: *node-common
+    environment:
+      NODE_ID: node-5
+      RAFT_PORT: "9090"
+      HTTP_PORT: "8080"
+      DATA_DIR: "/data"
+      PEERS: >-
+        node-1=node-1:9090:localhost:8081,
+        node-2=node-2:9090:localhost:8082,
+        node-3=node-3:9090:localhost:8083,
+        node-4=node-4:9090:localhost:8084
+    ports:
+      - "8085:8080"
+    volumes:
+      - node5-data:/data
+
+  frontend:
+    build:
+      context: ./frontend
+    ports:
+      - "5173:80"
+    depends_on:
+      - node-1
+      - node-2
+      - node-3
+      - node-4
+      - node-5
+
+volumes:
+  node1-data:
+  node2-data:
+  node3-data:
+  node4-data:
+  node5-data:
