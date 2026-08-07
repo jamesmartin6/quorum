@@ -89,11 +89,25 @@ entry in the new term, which commits (and transitively commits everything before
 majority acks it, instead of waiting for the next client write. The KV layer (Phase 3) must skip
 NOOP entries when applying to the map.
 
-## Phase 3 — KV API Layer
-- [ ] `internal/kv/store.go` — in-memory map + `Apply(entry)`
-- [ ] `internal/gateway/http.go` — POST/GET/DELETE /kv/{key}, GET /cluster/status
-- [ ] Leader forwarding/redirect for writes and reads on non-leader nodes
-- [ ] Tests: SET via any node visible everywhere after commit; write-to-follower errors correctly
+## Phase 3 — KV API Layer  [DONE]
+- [x] `internal/kv/store.go` — in-memory map + `Apply(entry)`, consumed off `raft.ApplyChan` by `Store.Run`
+- [x] `internal/gateway/http.go` — POST/GET/DELETE /kv/{key}, GET /cluster/status, GET /cluster/log
+      (also added POST /chaos/kill + /chaos/revive here since raft.Kill()/Revive() already existed
+      from Phase 1 and it was a trivial addition - Phase 5 just needs the frontend buttons now)
+- [x] Leader forwarding: writes/reads on a non-leader get 503 + `{leaderId, leaderHttpAddr}` (resolved
+      via PEERS-derived HTTP address map) instead of transparent proxying — simpler frontend logic,
+      matches the spec's stated preference
+- [x] Tests: `internal/kv/store_test.go` (Apply semantics, NOOP no-op, concurrent safety),
+      `internal/gateway/http_test.go` (SET/GET/DELETE round trip, malformed body, non-leader
+      redirect on both writes and reads, /cluster/status, chaos kill/revive)
+- [x] Manual E2E verify against a live 3-node cluster: SET/GET/DELETE via curl-equivalent all work,
+      follower correctly returns 503 for both writes and reads, and `/cluster/log` confirms all 3
+      nodes converge to byte-identical logs after commit
+
+**Bug found and fixed:** the gateway's "wait for write to be visible" logic originally polled only
+`raft.Status().CommitIndex`, but commitIndex advances the instant a majority acks an entry - the KV
+map itself updates asynchronously afterward via the apply loop. A client could SET then immediately
+GET and see nothing. Fixed by also waiting on `kv.Store.LastApplied()` reaching the target index.
 
 ## Phase 4 — Frontend Cluster Visualizer
 - [ ] Vite + React app scaffold
@@ -104,7 +118,9 @@ NOOP entries when applying to the map.
 - [ ] Visual verification against a running local cluster
 
 ## Phase 5 — Chaos Testing UI
-- [ ] `internal/gateway/chaos.go` — POST /chaos/kill, /chaos/revive (stop/resume Raft participation without killing process)
+- [x] Backend: POST /chaos/kill, /chaos/revive — done in Phase 3's gateway/http.go (raft.Kill()/Revive()
+      existed since Phase 1); tested in gateway/http_test.go. No separate chaos.go file needed - it's
+      two handlers, kept in http.go rather than a near-empty extra file.
 - [ ] `ChaosControls.jsx` — Kill/Revive buttons per node
 - [ ] Visual verification: kill leader → re-election visible; revive → catch-up visible
 

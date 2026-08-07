@@ -13,6 +13,7 @@ import (
 
 	"github.com/jamesmartin6/quorum/backend/internal/cluster"
 	"github.com/jamesmartin6/quorum/backend/internal/gateway"
+	"github.com/jamesmartin6/quorum/backend/internal/kv"
 	"github.com/jamesmartin6/quorum/backend/internal/raft"
 	"github.com/jamesmartin6/quorum/backend/internal/rpc"
 )
@@ -43,6 +44,9 @@ func main() {
 	node.Start()
 	defer node.Stop()
 
+	store := kv.NewStore()
+	go store.Run(node.ApplyChan())
+
 	grpcServer := rpc.NewGRPCServer(node)
 	raftLis, err := net.Listen("tcp", fmt.Sprintf(":%d", cfg.RaftPort))
 	if err != nil {
@@ -55,7 +59,7 @@ func main() {
 		}
 	}()
 
-	httpServer := gateway.NewServer(node, logger)
+	httpServer := gateway.NewServer(node, store, cfg.PeerHTTP, logger)
 	logger.Printf("HTTP gateway listening on :%d", cfg.HTTPPort)
 	if err := http.ListenAndServe(fmt.Sprintf(":%d", cfg.HTTPPort), httpServer.Handler()); err != nil {
 		logger.Fatalf("http serve: %v", err)
