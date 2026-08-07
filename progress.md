@@ -34,29 +34,47 @@ to run the whole system.
 - [x] Scaffold directory structure per build plan
 - [ ] `git init`, initial commit
 - [ ] Create GitHub repo `quorum` (public), push
-- [ ] Schedule cloud-agent safety net (RemoteTrigger one-shots) to continue overnight
-      if this local session hits a usage limit before the project is finished
+- [x] Schedule cloud-agent safety net — **blocked**: creating a routine with a
+      GitHub `git_repository` source requires connecting GitHub at
+      claude.ai/customize/connectors, which needs an interactive human OAuth
+      login I cannot perform. Proceeding without it: all real progress is
+      committed and pushed to GitHub continuously instead, so no work is lost
+      even if this session is cut off. If the user reconnects GitHub and wants
+      overnight cloud continuation, they can set it up via `/schedule` themselves.
 
-## Phase 1 — Core Raft: Leader Election
-- [ ] `backend/go.mod` module init
-- [ ] `internal/rpc/raft.proto` — RequestVote + AppendEntries (empty entries for now) RPCs
-- [ ] Generate `raft.pb.go` / `raft_grpc.pb.go`
-- [ ] `internal/raft/state.go` — persistent state (currentTerm, votedFor, log placeholder)
-- [ ] `internal/raft/raft.go` — core struct, roles (Follower/Candidate/Leader), state transitions
-- [ ] `internal/raft/election.go` — randomized election timeout, RequestVote handling/sending
-- [ ] `internal/rpc/server.go` — gRPC server wiring, in-process transport interface for tests
-- [ ] Unit tests: election timeout → candidacy; split vote resolves on retry; higher term → step-down
-- [ ] `cmd/node/main.go` — starts one node from env vars (ID, peers, ports)
-- [ ] Manual verify: `docker compose up` (minimal compose) → one leader within ~1s; `docker kill` leader → re-election within ~1-2s
+## Phase 1 — Core Raft: Leader Election  [DONE]
+- [x] `backend/go.mod` module init
+- [x] `internal/rpc/raft.proto` — RequestVote + AppendEntries RPCs (full fields incl. entries[],
+      written once now to avoid regenerating protoc output again in Phase 2)
+- [x] Generate `raft.pb.go` / `raft_grpc.pb.go`
+- [x] `internal/raft/state.go`, `log.go`, `persist.go` — persistent state + log + JSON file storage
+- [x] `internal/raft/raft.go` — core struct, roles (Follower/Candidate/Leader), state transitions,
+      apply-loop, Propose(), Kill()/Revive() (chaos hooks wired in now, used from Phase 5)
+- [x] `internal/raft/election.go` — randomized election timeout, RequestVote handling/sending
+- [x] `internal/raft/replication.go` — AppendEntries handling + leader replication loop (full log
+      matching/commit-index logic implemented alongside election since the two are tightly coupled;
+      Phase 2 testing focuses specifically on replication correctness, see below)
+- [x] `internal/rpc/server.go` — gRPC server + client transport adapter; `internal/raft/cluster_test.go`
+      has an in-memory Transport for fast deterministic unit tests
+- [x] Unit tests (`internal/raft/election_test.go`): election timeout → candidacy; split vote
+      resolves on retry; higher term (via AppendEntries and via RequestVote reply) → step-down;
+      vote-once-per-term; stale-log candidate denied. All passing (`go test ./internal/raft/...`).
+- [x] `cmd/node/main.go` + `internal/cluster/config.go` — starts one node from env vars (ID, peers, ports)
+- [x] Manual verify: built `bin/node.exe`, ran 3 local processes on distinct ports (Docker Desktop
+      is not installed on this dev machine and cannot be installed unattended — see Environment
+      notes; docker-compose.yml itself is still built correctly in Phase 6 for anyone with Docker).
+      Result: exactly one leader elected, all nodes agree on term/leader. Killed the leader process
+      → remaining two nodes elected a new leader within ~2s. Matches spec exactly.
 
 ## Phase 2 — Log Replication
-- [ ] Extend proto: AppendEntries carries entries[], prevLogIndex/Term, leaderCommit
-- [ ] `internal/raft/log.go` — log storage + append-only file persistence, replay on restart
-- [ ] Leader replication loop (parallel per-follower), nextIndex/matchIndex tracking
-- [ ] Follower consistency check + nextIndex backoff on mismatch
-- [ ] commitIndex advancement on majority replication; apply to state machine in order
-- [ ] Unit tests for log matching property
+- [x] Extend proto: AppendEntries carries entries[], prevLogIndex/Term, leaderCommit (done in Phase 1)
+- [x] `internal/raft/log.go` — log storage; `persist.go` — JSON-snapshot file persistence, replay on restart
+- [x] Leader replication loop (parallel per-follower), nextIndex/matchIndex tracking (done in Phase 1's replication.go)
+- [x] Follower consistency check + nextIndex backoff on mismatch (conflictIndex/conflictTerm, done in Phase 1)
+- [x] commitIndex advancement on majority replication; apply to state machine in order (applyLoop, done in Phase 1)
+- [ ] Unit tests specifically for log replication/matching/persistence behavior (replication_test.go)
 - [ ] Integration test: kill+restart follower mid-write, assert log convergence
+- [ ] Integration test: kill leader mid-write, verify no data loss, new leader elected (the core Raft guarantee)
 
 ## Phase 3 — KV API Layer
 - [ ] `internal/kv/store.go` — in-memory map + `Apply(entry)`
